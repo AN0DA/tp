@@ -113,6 +113,9 @@ omit = [
 [tool.coverage.report]
 show_missing = true
 
+[tool.poetry.scripts]
+tp = "tp.__main__:app"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
