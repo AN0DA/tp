@@ -2,6 +2,7 @@ import typer
 
 from tp.config import get_printer_ip, set_printer_ip
 from tp.printer import ThermalPrinter
+import typer
 
 app = typer.Typer()
 

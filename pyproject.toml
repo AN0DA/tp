@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tp"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["Mikołaj Kaczmarek <mikolaj.s.kaczmarek@outlook.com>"]
 readme = "README.md"
@@ -114,7 +114,7 @@ omit = [
 show_missing = true
 
 [tool.poetry.scripts]
-tp = "tp.__main__:app"
+tp = "tp.commands:app"
 
 [build-system]
 requires = ["poetry-core"]
