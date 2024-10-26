@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tp"
-version = "0.1.1"
+version = "0.1.1.1"
 description = ""
 authors = ["Mikołaj Kaczmarek <mikolaj.s.kaczmarek@outlook.com>"]
 readme = "README.md"
@@ -9,7 +9,7 @@ readme = "README.md"
 python = "^3.12"
 thermalprinter = "^0.2.0"
 escpos = "^2.0.0"
-typer = "^0.12.3"
+textual = "^0.14.0"
 
 [tool.poetry.group.dev.dependencies]
 bandit = "^1.7.7"
@@ -19,102 +19,23 @@ pytest-cov = "^4.1.0"
 pytest-mock = "^3.12.0"
 ruff = "^0.2.0"
 
-
 [tool.ruff]
 line-length = 120
 output-format = "full"
-
-exclude = [
-    # Commonly ignored dirs
-    ".bzr",
-    ".direnv",
-    ".eggs",
-    ".git",
-    ".git-rewrite",
-    ".hg",
-    ".ipynb_checkpoints",
-    ".mypy_cache",
-    ".nox",
-    ".pants.d",
-    ".pyenv",
-    ".pytest_cache",
-    ".pytype",
-    ".ruff_cache",
-    ".svn",
-    ".tox",
-    ".venv",
-    ".vscode",
-    "__pypackages__",
-    "_build",
-    "buck-out",
-    "build",
-    "dist",
-    "node_modules",
-    "site-packages",
-    "venv",
-    "src/migrations"
-]
-target-version = "py311"
-
-[tool.ruff.lint]
-select = [
-    "A",
-    "B",
-    "C4",
-    "E",
-    "F",
-    "I001",
-    "SIM",
-    "T201",
-    "UP",
-]
-ignore = ["E501", "B008"]
-unfixable = ["B"]
-
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-line-ending = "auto"
-skip-magic-trailing-comma = false
-
+exclude = [".git", "venv", "node_modules"]
 
 [tool.pytest]
-python_file = "tests.py test_*.py *_tests.py"
-norecursedirs = ".git .env venv"
-
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+norecursedirs = [".git", ".env", "venv"]
 
 [tool.mypy]
 python_version = "3.11"
 show_error_codes = true
 strict = true
-disallow_untyped_calls = false
-disallow_any_generics = false
-warn_return_any = false
 ignore_missing_imports = true
-disable_error_code = "abstract"
-
-
-
-[tool.bandit]
-exclude_dirs = ['test/*']
-
-
-[tool.coverage.paths]
-source = ["src/"]
-
-[tool.coverage.run]
-source = ["src/"]
-omit = [
-    "**/__init__.py",
-    "src/errors.py"
-]
-
-[tool.coverage.report]
-show_missing = true
 
 [tool.poetry.scripts]
-tp = "tp.commands:app"
+tp = "tp.app:main"
 
 [build-system]
 requires = ["poetry-core"]
