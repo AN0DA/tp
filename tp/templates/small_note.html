@@ -1,0 +1,17 @@
+<!-- templates/small_note.html -->
+{% extends "base.html" %}
+
+{% block content %}
+<div class="card text-center">
+    <div class="card-header">
+        <h2>Print Small Note</h2>
+    </div>
+    <div class="card-body">
+        <p class="card-text">Do you want to print a small note?</p>
+        <form method="post" class="d-inline">
+            <button name="confirm" value="yes" class="btn btn-primary">Yes</button>
+            <button name="confirm" value="no" class="btn btn-secondary">No</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

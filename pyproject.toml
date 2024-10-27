@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tp"
-version = "0.1.1"
+version = "0.1.11"
 description = ""
 authors = ["Mikołaj Kaczmarek <mikolaj.s.kaczmarek@outlook.com>"]
 readme = "README.md"
@@ -9,7 +9,9 @@ readme = "README.md"
 python = "^3.12"
 thermalprinter = "^0.2.0"
 escpos = "^2.0.0"
-typer = "^0.12.3"
+typer = "^0.12.5"
+pyqt6 = "^6.7.1"
+flask = "^3.0.3"
 
 [tool.poetry.group.dev.dependencies]
 bandit = "^1.7.7"
@@ -52,9 +54,8 @@ exclude = [
     "node_modules",
     "site-packages",
     "venv",
-    "src/migrations"
 ]
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = [
@@ -85,7 +86,7 @@ norecursedirs = ".git .env venv"
 
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 show_error_codes = true
 strict = true
 disallow_untyped_calls = false
@@ -101,20 +102,19 @@ exclude_dirs = ['test/*']
 
 
 [tool.coverage.paths]
-source = ["src/"]
+source = ["tp/"]
 
 [tool.coverage.run]
-source = ["src/"]
+source = ["tp/"]
 omit = [
     "**/__init__.py",
-    "src/errors.py"
 ]
 
 [tool.coverage.report]
 show_missing = true
 
 [tool.poetry.scripts]
-tp = "tp.commands:app"
+tp = "tp.app:app"
 
 [build-system]
 requires = ["poetry-core"]
