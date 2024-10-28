@@ -1,0 +1,219 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+
+jobs:
+  Validate:
+    name: Validate conditions
+    runs-on: ubuntu-latest
+    outputs:
+      branch_valid: ${{ steps.check_branch.outputs.branch_valid }}
+    steps:
+      - name: Check if running on main branch
+        id: check_branch
+        run: |
+          echo "Checking if the workflow is running on the main branch..."
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "branch_valid=true" >> $GITHUB_OUTPUT
+            echo "::notice::Running on the main branch."
+          else
+            echo "branch_valid=false" >> $GITHUB_OUTPUT
+            echo "::error::This action can only be run from the main branch."
+          fi
+
+  Linting:
+    name: Linting
+    runs-on: ubuntu-latest
+    needs: Validate
+    if: needs.Validate.outputs.branch_valid == 'true'
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Poetry
+        uses: abatilo/actions-poetry@v3
+
+      - name: Install Python dependencies
+        run: poetry install
+
+      - name: Ruff linter check
+        id: ruff-linter
+        if: always()
+        run: poetry run ruff check --config pyproject.toml --output-format=github --exit-non-zero-on-fix tp/ test/
+
+      - name: Ruff formatter check
+        id: ruff-formatter
+        if: always()
+        run: poetry run ruff format --config pyproject.toml --check tp/ test/
+
+      - name: Bandit check
+        id: bandit
+        if: always()
+        run: poetry run bandit -c pyproject.toml -r tp/
+
+  Test:
+    name: Python tests
+    runs-on: ubuntu-latest
+    needs: Validate
+    if: needs.Validate.outputs.branch_valid == 'true'
+    permissions:
+      contents: read
+      issues: read
+      checks: write
+      pull-requests: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Poetry
+        uses: abatilo/actions-poetry@v3
+
+      - name: Install Python dependencies
+        run: poetry install
+
+      - name: Run Python tests
+        run: poetry run coverage run -m pytest --junitxml=./test_results.xml
+
+      - name: Publish test results to GitHub
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: ./test_results.xml
+          fail_on: nothing
+          pull_request_build: commit
+
+  Mypy:
+    name: Mypy
+    runs-on: ubuntu-latest
+    needs: Validate
+    if: needs.Validate.outputs.branch_valid == 'true'
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Poetry
+        uses: abatilo/actions-poetry@v3
+
+      - name: Install Python dependencies
+        run: poetry install
+
+      - name: Mypy check
+        id: mypy
+        if: always()
+        run: poetry run mypy tp/ test/
+
+  Semantic-release:
+    name: Run semantic release
+    runs-on: ubuntu-latest
+    needs:
+      - Linting
+      - Test
+      - Mypy
+    if: needs.Validate.outputs.branch_valid == 'true'
+    outputs:
+      new_release_version: ${{ steps.release.outputs.new_release_version }}
+      new_release_published: ${{ steps.release.outputs.new_release_published }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Poetry
+        uses: abatilo/actions-poetry@v3
+
+      - name: Install dependencies
+        run: poetry install
+
+      - name: Create .releaserc file
+        run: cp .github/.releaserc .releaserc
+
+      - name: Run Semantic Release
+        id: release
+        uses: cycjimmy/semantic-release-action@v4
+        with:
+          semantic_version: 24
+          extra_plugins: |
+            @semantic-release/changelog
+            @semantic-release/exec
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Sonar Project Version
+        env:
+          NEW_VERSION: ${{ steps.release.outputs.new_release_version }}
+        run: sed -i "s/sonar.projectVersion=.*/sonar.projectVersion=$NEW_VERSION/" sonar-project.properties
+
+
+      - name: Upload artifacts
+        if: steps.release.outputs.new_release_published == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: |
+            CHANGELOG.md
+            pyproject.toml
+            sonar-project.properties
+
+  Changelog-pr:
+    name: Create Changelog Pull Request
+    runs-on: ubuntu-latest
+    needs:
+      - Semantic-release
+    if: needs.Semantic-release.outputs.new_release_published == 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: .
+
+      - name: Setup git
+        run: |
+          git config --global user.name 'github-actions'
+          git config --global user.email 'github-actions@github.com'
+
+      - name: Commit and push changes
+        run: |
+          git checkout -b release/${{ needs.Semantic-release.outputs.new_release_version }}
+          git add CHANGELOG.md pyproject.toml sonar-project.properties
+          git commit -m "chore: release ${{ needs.Semantic-release.outputs.new_release_version }}"
+          git push origin release/${{ needs.Semantic-release.outputs.new_release_version }}
+
+      - name: Create pull request
+        run: |
+          gh pr create \
+          -B main -H release/${{ needs.Semantic-release.outputs.new_release_version }} \
+          --title 'chore: release ${{ needs.Semantic-release.outputs.new_release_version }}' \
+          --body 'This PR updates the changelog, `pyproject.toml` and `sonar-project.properties` for version ${{ needs.Semantic-release.outputs.new_release_version }}.'
+          
+          echo "::notice::Changes committed and pushed; pull request created."
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
