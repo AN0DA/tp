@@ -1,0 +1,15 @@
+{
+  "branches": ["main"],
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    "@semantic-release/changelog",
+    [
+      "@semantic-release/exec",
+      {
+        "generateNotesCmd": "poetry version ${nextRelease.version}"
+      }
+    ],
+    "@semantic-release/github"
+  ]
+}

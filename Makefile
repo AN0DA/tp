@@ -1,5 +1,7 @@
 .PHONY: lint mypy test
 
+all: lint mypy test
+
 lint:
 	poetry run sh -c 'set -x && \
 	ruff format tp/ test/ \
@@ -12,5 +14,5 @@ mypy:
 test:
 	poetry run pytest --cov --cov-report term-missing:skip-covered
 
-export_deps:
+freeze:
 	poetry export -f requirements.txt --output requirements.txt --without-hashes
