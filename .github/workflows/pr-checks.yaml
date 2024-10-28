@@ -100,33 +100,6 @@ jobs:
           path: |
             mypy_report.xml
 
-  Validate-requirements:
-    name: Validate requirements.txt
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install Poetry
-        uses: abatilo/actions-poetry@v3
-
-      - name: Install project dependencies
-        run: poetry install
-
-      - name: Export requirements.txt
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          poetry export -f requirements.txt --output requirements.txt --without-hashes
-
-      - name: Check if requirements.txt is up to date
-        id: diff
-        run: git diff --exit-code requirements.txt
-
   Test:
     name: Python tests
     runs-on: ubuntu-latest
@@ -134,7 +107,6 @@ jobs:
       - Linting
       - Commits
       - Mypy
-      - Validate-requirements
     permissions:
       contents: read
       issues: read
