@@ -42,7 +42,7 @@ def test_set_and_get_chars_per_line() -> None:
 
 
 def test_get_enable_special_letters_default() -> None:
-    assert config.get_enable_special_letters() is True
+    assert config.get_enable_special_letters() is False
 
 
 def test_set_and_get_enable_special_letters() -> None:
