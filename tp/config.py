@@ -60,7 +60,6 @@ def set_enable_special_letters(enable: bool) -> None:
         config.write(configfile)
 
 
-
 def get_flask_port() -> int:
     config = configparser.ConfigParser()
     config.read(CONFIG_FILE)

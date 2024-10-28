@@ -38,6 +38,7 @@ app.add_typer(config_app, name="config")
 
 missing_ip_message = "Printer IP address not set. Please set it using 'settings set-ip'."
 
+
 @print_app.command()
 def task(
     title: str = typer.Option(None, help="Task Title"),
