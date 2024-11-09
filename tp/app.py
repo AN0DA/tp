@@ -3,14 +3,18 @@ import os
 import subprocess  # nosec: B404
 import sys
 
+import click
 import typer
 
+from tp import __version__
 from tp.config import (
     CONFIG_FILE,
     get_chars_per_line,
+    get_check_for_updates,
     get_enable_special_letters,
     get_printer_ip,
     set_chars_per_line,
+    set_check_for_updates,
     set_enable_special_letters,
     set_printer_ip,
 )
@@ -39,31 +43,34 @@ app.add_typer(config_app, name="config")
 missing_ip_message = "Printer IP address not set. Please set it using 'settings set-ip'."
 
 
-@print_app.command()
-def task(
-    title: str = typer.Option(None, help="Task Title"),
-    text: str = typer.Option(None, help="Task Text (supports markdown)"),
-) -> None:
-    """
-    Print a task.
-    """
-    if not title:
-        title = typer.prompt("Enter Task Title")
-    if not text:
-        text = typer.prompt("Enter Task Text (supports markdown)")
+def check_for_updates_on_startup() -> None:
+    if get_check_for_updates():  # noqa: SIM102
+        if is_new_version_available(__version__):
+            update = typer.confirm("A new version is available. Do you want to update?")
+            if update:
+                perform_update()
+            else:
+                typer.echo("You can update later by running 'tp update' command.")
+
+
+def perform_update() -> None:
     try:
-        ip_address = get_printer_ip()
-    except ValueError as e:
-        typer.echo(str(e))
-        typer.echo(missing_ip_message)
-        sys.exit(1)
-    try:
-        printer = ThermalPrinter(ip_address)
-        printer.task(title, text)
-        typer.echo("Printed task.")
-    except Exception as e:
-        typer.echo(f"Failed to print task: {e}")
-        logger.error(f"Error printing task: {e}", exc_info=True)
+        cmd = [sys.executable, "-m", "pip", "install", "--upgrade", "git+https://github.com/AN0DA/tp.git"]
+        typer.echo("Updating the application...")
+
+        # Check for user permissions
+        import os
+
+        if not os.access(sys.executable, os.W_OK):
+            typer.echo("You might not have permission to update the application.")
+            typer.echo("Please run the update command with administrative privileges.")
+            sys.exit(1)
+
+        subprocess.check_call(cmd)  # nosec: B603
+        typer.echo("Application updated successfully.")
+        sys.exit(0)
+    except subprocess.CalledProcessError as e:
+        typer.echo(f"Failed to update application: {e}")
         sys.exit(1)
 
 
@@ -135,6 +142,17 @@ def set_enable_special_letters_command(
     typer.echo(f"Enable special letters set to {enable}")
 
 
+@settings_app.command("set-check-for-updates")
+def set_check_for_updates_command(
+    check: bool = typer.Argument(..., help="Enable or disable automatic updates (True/False)"),
+) -> None:
+    """
+    Enable or disable automatic update checking.
+    """
+    set_check_for_updates(check)
+    typer.echo(f"Check for updates set to {check}")
+
+
 @settings_app.command()
 def show() -> None:
     """
@@ -146,9 +164,19 @@ def show() -> None:
         ip_address = "Not set"
     chars_per_line = get_chars_per_line()
     enable_special_letters = get_enable_special_letters()
+    check_for_updates = get_check_for_updates()
     typer.echo(f"Printer IP Address: {ip_address}")
     typer.echo(f"Characters Per Line: {chars_per_line}")
     typer.echo(f"Enable Special Letters: {enable_special_letters}")
+    typer.echo(f"Check for Updates: {check_for_updates}")
+
+
+@app.command()
+def update() -> None:
+    """
+    Manually update the application to the latest version.
+    """
+    perform_update()
 
 
 @app.command()
@@ -206,4 +234,5 @@ def config_edit() -> None:
 
 
 if __name__ == "__main__":
+    check_for_updates_on_startup()
     app()

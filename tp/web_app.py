@@ -7,11 +7,11 @@ from werkzeug.wrappers import Response
 
 from tp.config import (
     get_chars_per_line,
+    get_check_for_updates,
     get_enable_special_letters,
-    get_flask_debug,
-    get_flask_secret_key,
     get_printer_ip,
     set_chars_per_line,
+    set_check_for_updates,
     set_enable_special_letters,
     set_printer_ip,
 )
@@ -80,6 +80,7 @@ def settings() -> Response | str:
         ip_address = request.form.get("ip_address")
         chars_per_line_value = request.form.get("chars_per_line")
         enable_special_letters_value = request.form.get("enable_special_letters")
+        check_for_updates_value = request.form.get("check_for_updates")
 
         set_printer_ip(ip_address or "")
 
@@ -98,6 +99,16 @@ def settings() -> Response | str:
             flash("Invalid value for enable special letters. Use True or False.", "error")
             return redirect(url_for("settings"))
         set_enable_special_letters(enable_special_letters)
+
+        if (check_for_updates_value or "").lower() in ("true", "yes", "1"):
+            check_for_updates = True
+        elif (check_for_updates_value or "").lower() in ("false", "no", "0"):
+            check_for_updates = False
+        else:
+            flash("Invalid value for check for updates. Use True or False.", "error")
+            return redirect(url_for("settings"))
+        set_check_for_updates(check_for_updates)
+
         flash("Settings saved.", "success")
         return redirect(url_for("index"))
     else:
@@ -107,12 +118,14 @@ def settings() -> Response | str:
             ip_address = ""
         chars_per_line = get_chars_per_line()
         enable_special_letters = get_enable_special_letters()
+        check_for_updates = get_check_for_updates()
         return render_template(
             "settings.html",
             templates=templates,
             ip_address=ip_address,
             chars_per_line=chars_per_line,
             enable_special_letters=enable_special_letters,
+            check_for_updates=check_for_updates,
         )
 
 

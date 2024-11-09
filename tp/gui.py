@@ -18,9 +18,11 @@ from PyQt6.QtWidgets import (
 
 from tp.config import (
     get_chars_per_line,
+    get_check_for_updates,
     get_enable_special_letters,
     get_printer_ip,
     set_chars_per_line,
+    set_check_for_updates,
     set_enable_special_letters,
     set_printer_ip,
 )
@@ -151,6 +153,10 @@ class SettingsDialog(QDialog):
         self.enable_special_letters_input.setText(str(get_enable_special_letters()))
         form_layout.addRow("Enable Special Letters (True/False):", self.enable_special_letters_input)
 
+        self.check_for_updates_input = QLineEdit()
+        self.check_for_updates_input.setText(str(get_check_for_updates()))
+        form_layout.addRow("Check for Updates (True/False):", self.check_for_updates_input)
+
         layout.addLayout(form_layout)
 
         button_layout = QHBoxLayout()
@@ -186,6 +192,17 @@ class SettingsDialog(QDialog):
             QMessageBox.critical(self, "Error", "Invalid value for enable special letters. Use True or False.")
             return
         set_enable_special_letters(enable_special_letters)
+
+        check_for_updates_value = self.check_for_updates_input.text()
+        if check_for_updates_value.lower() in ("true", "yes", "1"):
+            check_for_updates = True
+        elif check_for_updates_value.lower() in ("false", "no", "0"):
+            check_for_updates = False
+        else:
+            QMessageBox.critical(self, "Error", "Invalid value for check for updates. Use True or False.")
+            return
+        set_check_for_updates(check_for_updates)
+
         QMessageBox.information(self, "Success", "Settings saved.")
         self.accept()
 

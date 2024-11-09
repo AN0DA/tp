@@ -74,13 +74,6 @@ class TemplateRenderer:
                     styles = seg.get("styles", {})
                     rendered_segments.append({"text": wrapped_text, "styles": styles})
             else:
-                # No more matches; add the rest of the text as a plain segment
-                plain_text = text[pos:]
-                wrapped_text = textwrap.fill(plain_text, width=self.chars_per_line)
-                segments.append({"text": wrapped_text, "styles": {}})
-                break
-        logger.debug("Parsed segments: %s", segments)
-        return segments
                 wrapped_text = textwrap.fill(
                     text, width=self.chars_per_line, replace_whitespace=False, drop_whitespace=False
                 )
@@ -107,3 +100,21 @@ def compute_agenda_variables() -> dict[str, Any]:
         "days": days,
     }
 
+
+def get_latest_version() -> str:
+    url = "https://api.github.com/repos/AN0DA/tp/releases/latest"
+    response = requests.get(url, timeout=5)
+    if response.status_code == 200:
+        data = response.json()
+        return data["tag_name"].lstrip("v")  # Remove 'v' if present
+    else:
+        raise Exception("Failed to fetch the latest version from GitHub.")
+
+
+def is_new_version_available(current_version: str) -> bool:
+    try:
+        latest_version = get_latest_version()
+        return version.parse(latest_version) > version.parse(current_version)
+    except Exception as e:
+        logger.error(f"Error checking for updates: {e}")
+        return False
