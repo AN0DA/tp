@@ -6,10 +6,10 @@
     <h1>Welcome to the Thermal Printer Application</h1>
     <p class="lead">Select an option below to get started.</p>
     <div class="d-grid gap-2 d-md-block">
-        <a href="{{ url_for('task') }}" class="btn btn-primary btn-lg">Print Task</a>
-        <a href="{{ url_for('small_note') }}" class="btn btn-secondary btn-lg">Print Small Note</a>
-        <a href="{{ url_for('ticket') }}" class="btn btn-success btn-lg">Print Ticket</a>
-        <a href="{{ url_for('settings') }}" class="btn btn-info btn-lg">Settings</a>
+        {% for name, template in templates.items() %}
+        <a href="{{ url_for('print_template', template_name=name) }}" class="btn btn-primary btn-lg">{{ template.name }}</a>
+        {% endfor %}
+        <a href="{{ url_for('settings') }}" class="btn btn-secondary btn-lg">Settings</a>
     </div>
 </div>
 {% endblock %}

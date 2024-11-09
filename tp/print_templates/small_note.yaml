@@ -1,0 +1,7 @@
+name: Small Note
+description: Print a small note with space to write.
+variables: []
+segments:
+  - text: "\n\n\n\n\n\n\n"
+    markdown: false
+    styles: {}

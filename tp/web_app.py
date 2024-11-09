@@ -2,7 +2,8 @@ import logging
 import os
 
 from flask import Flask, flash, redirect, render_template, request, url_for
-from werkzeug.wrappers.response import Response
+from waitress import serve
+from werkzeug.wrappers import Response
 
 from tp.config import (
     get_chars_per_line,
@@ -15,91 +16,66 @@ from tp.config import (
     set_printer_ip,
 )
 from tp.printer import ThermalPrinter
+from tp.template_manager import TemplateManager
+from tp.utils import compute_agenda_variables
 
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.secret_key = get_flask_secret_key()
-app.config["DEBUG"] = get_flask_debug()
+app.secret_key = "your_secret_key_here"  # nosec: B105
+
+template_manager = TemplateManager("tp/print_templates")
 
 
 @app.route("/")
 def index() -> str:
-    return render_template("index.html")
+    templates = template_manager.templates
+    return render_template("index.html", templates=templates)
 
 
-@app.route("/task", methods=["GET", "POST"])
-def task() -> Response | str:
+@app.route("/print/<template_name>", methods=["GET", "POST"])
+def print_template(template_name: str) -> Response | str:
+    templates = template_manager.templates
+    template = template_manager.get_template(template_name)
+    if not template:
+        flash(f"Template '{template_name}' not found.", "error")
+        return redirect(url_for("index"))
     if request.method == "POST":
-        title = request.form.get("title")
-        text = request.form.get("text")
+        context = {}
         try:
+            match template_name:
+                case "agenda":
+                    context = compute_agenda_variables()
+                case _:
+                    context = {var["name"]: request.form.get(var["name"]) for var in template.get("variables", [])}
+
+                    if not context:
+                        confirm = request.form.get("confirm")
+                        if confirm == "no":
+                            flash(f"Cancelled printing {template_name}.", "info")
+                            return redirect(url_for("index"))
+
             ip_address = get_printer_ip()
-        except ValueError as e:
-            flash(str(e), "error")
-            return redirect(url_for("settings"))
-        try:
-            printer = ThermalPrinter(ip_address)
-            printer.task(title or "", text or "")
-            flash("Printed task.", "success")
+            with ThermalPrinter(ip_address, template_manager) as printer:
+                printer.print_template(template_name, context)
+            flash(f"Printed using template '{template_name}'.", "success")
             return redirect(url_for("index"))
+
         except Exception as e:
-            logger.error(f"Error printing task: {e}", exc_info=True)
-            flash(f"Failed to print task: {e}", "error")
-            return redirect(url_for("task"))
-    return render_template("task.html")
-
-
-@app.route("/small_note", methods=["GET", "POST"])
-def small_note() -> Response | str:
-    if request.method == "POST":
-        confirm = request.form.get("confirm")
-        if confirm == "yes":
-            try:
-                ip_address = get_printer_ip()
-            except ValueError as e:
-                flash(str(e), "error")
-                return redirect(url_for("settings"))
-            try:
-                printer = ThermalPrinter(ip_address)
-                printer.small_note()
-                flash("Printed small note.", "success")
-                return redirect(url_for("index"))
-            except Exception as e:
-                logger.error(f"Error printing small note: {e}", exc_info=True)
-                flash(f"Failed to print small note: {e}", "error")
-                return redirect(url_for("small_note"))
-        else:
-            flash("Cancelled printing small note.", "info")
-            return redirect(url_for("index"))
-    return render_template("small_note.html")
-
-
-@app.route("/ticket", methods=["GET", "POST"])
-def ticket() -> Response | str:
-    if request.method == "POST":
-        title = request.form.get("title")
-        ticket_number = request.form.get("ticket_number")
-        text = request.form.get("text")
-        try:
-            ip_address = get_printer_ip()
-        except ValueError as e:
-            flash(str(e), "error")
-            return redirect(url_for("settings"))
-        try:
-            printer = ThermalPrinter(ip_address)
-            printer.ticket(title or "", ticket_number or "", text or "")
-            flash("Printed ticket.", "success")
-            return redirect(url_for("index"))
-        except Exception as e:
-            logger.error(f"Error printing ticket: {e}", exc_info=True)
-            flash(f"Failed to print ticket: {e}", "error")
-            return redirect(url_for("ticket"))
-    return render_template("ticket.html")
+            logger.error(f"Error printing template '{template_name}': {e}", exc_info=True)
+            flash(f"Failed to print: {e}", "error")
+    return render_template(
+        "print_template.html",
+        templates=templates,
+        template=template,
+        markdown_vars=[var["name"] for var in template.get("variables", []) if var.get("markdown", False)],
+    )
 
 
 @app.route("/settings", methods=["GET", "POST"])
 def settings() -> Response | str:
+    templates = template_manager.templates
+
     if request.method == "POST":
         ip_address = request.form.get("ip_address")
         chars_per_line_value = request.form.get("chars_per_line")
@@ -133,6 +109,7 @@ def settings() -> Response | str:
         enable_special_letters = get_enable_special_letters()
         return render_template(
             "settings.html",
+            templates=templates,
             ip_address=ip_address,
             chars_per_line=chars_per_line,
             enable_special_letters=enable_special_letters,
@@ -146,4 +123,8 @@ def main() -> None:
     app.template_folder = template_dir
     app.static_folder = static_dir
 
-    app.run(host="0.0.0.0", port=5555)  # nosec: B104
+    serve(app, host="0.0.0.0", port=5555)  # nosec: B104
+
+
+if __name__ == "__main__":
+    main()

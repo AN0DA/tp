@@ -15,6 +15,8 @@ from tp.config import (
     set_printer_ip,
 )
 from tp.printer import ThermalPrinter
+from tp.template_manager import TemplateManager
+from tp.utils import compute_agenda_variables, is_new_version_available
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,11 +30,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = typer.Typer(help="Thermal Printer Application")
-print_app = typer.Typer(help="Printing commands")
 settings_app = typer.Typer(help="Settings commands")
 config_app = typer.Typer(help="Configuration commands")
 
-app.add_typer(print_app, name="print")
 app.add_typer(settings_app, name="settings")
 app.add_typer(config_app, name="config")
 
@@ -67,59 +67,42 @@ def task(
         sys.exit(1)
 
 
-@print_app.command("small-note")
-def small_note() -> None:
+@app.command()
+def print_template(template_name: str = typer.Argument(None)) -> None:
     """
-    Print a small note.
+    Print using a specified template.
     """
-    confirm = typer.confirm("Do you want to print a small note?")
-    if not confirm:
-        typer.echo("Cancelled printing small note.")
-        return
-    try:
-        ip_address = get_printer_ip()
-    except ValueError as e:
-        typer.echo(str(e))
-        typer.echo(missing_ip_message)
-        sys.exit(1)
-    try:
-        printer = ThermalPrinter(ip_address)
-        printer.small_note()
-        typer.echo("Printed small note.")
-    except Exception as e:
-        typer.echo(f"Failed to print small note: {e}")
-        logger.error(f"Error printing small note: {e}", exc_info=True)
+    template_manager = TemplateManager("tp/print_templates")
+    if not template_name:
+        typer.echo("Available templates:")
+        for name in template_manager.list_templates():
+            typer.echo(f"- {name}")
+        template_name = typer.prompt("Enter the template name")
+
+    template = template_manager.get_template(template_name)
+    if not template:
+        typer.echo(f"Template '{template_name}' not found.")
         sys.exit(1)
 
+    context = {}
+    if template_name == "agenda":
+        context = compute_agenda_variables()
+    else:
+        for var in template.get("variables", []):
+            if var.get("markdown", False):
+                value = click.edit(var["description"], require_save=True)
+            else:
+                value = typer.prompt(var["description"])
+            context[var["name"]] = value
 
-@print_app.command()
-def ticket(
-    title: str = typer.Option(None, help="Ticket Title"),
-    ticket_number: str = typer.Option(None, help="Ticket Number"),
-    text: str = typer.Option(None, help="Ticket Text (supports markdown)"),
-) -> None:
-    """
-    Print a ticket.
-    """
-    if not title:
-        title = typer.prompt("Enter Ticket Title")
-    if not ticket_number:
-        ticket_number = typer.prompt("Enter Ticket Number")
-    if not text:
-        text = typer.prompt("Enter Ticket Text (supports markdown)")
     try:
         ip_address = get_printer_ip()
-    except ValueError as e:
-        typer.echo(str(e))
-        typer.echo(missing_ip_message)
-        sys.exit(1)
-    try:
-        printer = ThermalPrinter(ip_address)
-        printer.ticket(title, ticket_number, text)
-        typer.echo("Printed ticket.")
+        with ThermalPrinter(ip_address, template_manager) as printer:
+            printer.print_template(template_name, context)
+        typer.echo(f"Printed using template '{template_name}'.")
     except Exception as e:
-        typer.echo(f"Failed to print ticket: {e}")
-        logger.error(f"Error printing ticket: {e}", exc_info=True)
+        typer.echo(f"Failed to print: {e}")
+        logger.error(f"Error printing template '{template_name}': {e}", exc_info=True)
         sys.exit(1)
 
 

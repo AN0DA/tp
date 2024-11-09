@@ -1,5 +1,6 @@
 import logging
 import sys
+from typing import Any
 
 from PyQt6.QtWidgets import (
     QApplication,
@@ -24,6 +25,8 @@ from tp.config import (
     set_printer_ip,
 )
 from tp.printer import ThermalPrinter
+from tp.template_manager import TemplateManager
+from tp.utils import compute_agenda_variables
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +34,7 @@ logger = logging.getLogger(__name__)
 class MainWindow(QWidget):
     def __init__(self) -> None:
         super().__init__()
+        self.template_manager = TemplateManager("tp/print_templates")
         self.setWindowTitle("Thermal Printer Application")
         self.init_ui()
 
@@ -42,17 +46,10 @@ class MainWindow(QWidget):
 
         button_layout = QHBoxLayout()
 
-        task_button = QPushButton("Task")
-        task_button.clicked.connect(self.open_task_dialog)
-        button_layout.addWidget(task_button)
-
-        small_note_button = QPushButton("Small Note")
-        small_note_button.clicked.connect(self.print_small_note)
-        button_layout.addWidget(small_note_button)
-
-        ticket_button = QPushButton("Ticket")
-        ticket_button.clicked.connect(self.open_ticket_dialog)
-        button_layout.addWidget(ticket_button)
+        for template_name in self.template_manager.list_templates():
+            button = QPushButton(template_name.capitalize())
+            button.clicked.connect(lambda _, t=template_name: self.open_template_dialog(t))
+            button_layout.addWidget(button)
 
         settings_button = QPushButton("Settings")
         settings_button.clicked.connect(self.open_settings_dialog)
@@ -62,59 +59,40 @@ class MainWindow(QWidget):
 
         self.setLayout(layout)
 
-    def open_task_dialog(self) -> None:
-        dialog = TaskDialog(self)
+    def open_template_dialog(self, template_name: str) -> None:
+        dialog = TemplateDialog(template_name, self.template_manager, self)
         dialog.exec()
-
-    def open_ticket_dialog(self) -> None:
-        dialog = TicketDialog(self)
-        dialog.exec()
-
-    def print_small_note(self) -> None:
-        confirm = QMessageBox.question(
-            self,
-            "Confirm",
-            "Do you want to print a small note?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        if confirm == QMessageBox.StandardButton.Yes:
-            try:
-                ip_address = get_printer_ip()
-            except ValueError as e:
-                QMessageBox.critical(self, "Error", str(e))
-                return
-            try:
-                printer = ThermalPrinter(ip_address)
-                printer.small_note()
-                QMessageBox.information(self, "Success", "Printed small note.")
-            except Exception as e:
-                logger.error(f"Error printing small note: {e}", exc_info=True)
-                QMessageBox.critical(self, "Error", f"Failed to print small note: {e}")
 
     def open_settings_dialog(self) -> None:
         dialog = SettingsDialog(self)
         dialog.exec()
 
 
-class TaskDialog(QDialog):
-    def __init__(self, parent: QWidget | None = None) -> None:
+class TemplateDialog(QDialog):
+    def __init__(self, template_name: str, template_manager: TemplateManager, parent: QWidget | None = None):
         super().__init__(parent)
-        self.setWindowTitle("Print Task")
+        self.template_name = template_name
+        self.template_manager = template_manager
+        self.inputs: dict[str, Any] = {}
+        self.setWindowTitle(f"Print {template_name.capitalize()}")
         self.init_ui()
 
     def init_ui(self) -> None:
+        template = self.template_manager.get_template(self.template_name)
         layout = QVBoxLayout()
 
         form_layout = QFormLayout()
-        self.title_input = QLineEdit()
-        self.text_input = QTextEdit()
-        form_layout.addRow("Title:", self.title_input)
-        form_layout.addRow("Text (supports markdown):", self.text_input)
+        for var in template.get("variables", []):
+            input_field = QTextEdit() if var.get("markdown", False) else QLineEdit()
+            if isinstance(input_field, QTextEdit):
+                input_field.setAcceptRichText(False)  # Ensure plain text only
+            form_layout.addRow(var["description"], input_field)
+            self.inputs[var["name"]] = input_field
         layout.addLayout(form_layout)
 
         button_layout = QHBoxLayout()
         print_button = QPushButton("Print")
-        print_button.clicked.connect(self.print_task)
+        print_button.clicked.connect(self.print_template)
         button_layout.addWidget(print_button)
 
         cancel_button = QPushButton("Cancel")
@@ -124,71 +102,27 @@ class TaskDialog(QDialog):
         layout.addLayout(button_layout)
         self.setLayout(layout)
 
-    def print_task(self) -> None:
-        title = self.title_input.text()
-        text = self.text_input.toPlainText()
+    def print_template(self) -> None:
+        template = self.template_manager.get_template(self.template_name)
+        context = {}
+        if self.template_name == "agenda":
+            context = compute_agenda_variables()
+        else:
+            for var in template.get("variables", []):
+                input_field = self.inputs[var["name"]]
+                if isinstance(input_field, QTextEdit):
+                    context[var["name"]] = input_field.toPlainText()
+                else:
+                    context[var["name"]] = input_field.text()
         try:
             ip_address = get_printer_ip()
-        except ValueError as e:
-            QMessageBox.critical(self, "Error", str(e))
-            return
-        try:
-            printer = ThermalPrinter(ip_address)
-            printer.task(title, text)
-            QMessageBox.information(self, "Success", "Printed task.")
+            with ThermalPrinter(ip_address, self.template_manager) as printer:
+                printer.print_template(self.template_name, context)
+            QMessageBox.information(self, "Success", f"Printed using template '{self.template_name}'.")
             self.accept()
         except Exception as e:
-            logger.error(f"Error printing task: {e}", exc_info=True)
-            QMessageBox.critical(self, "Error", f"Failed to print task: {e}")
-
-
-class TicketDialog(QDialog):
-    def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self.setWindowTitle("Print Ticket")
-        self.init_ui()
-
-    def init_ui(self) -> None:
-        layout = QVBoxLayout()
-
-        form_layout = QFormLayout()
-        self.title_input = QLineEdit()
-        self.ticket_number_input = QLineEdit()
-        self.text_input = QTextEdit()
-        form_layout.addRow("Title:", self.title_input)
-        form_layout.addRow("Ticket Number:", self.ticket_number_input)
-        form_layout.addRow("Text (supports markdown):", self.text_input)
-        layout.addLayout(form_layout)
-
-        button_layout = QHBoxLayout()
-        print_button = QPushButton("Print")
-        print_button.clicked.connect(self.print_ticket)
-        button_layout.addWidget(print_button)
-
-        cancel_button = QPushButton("Cancel")
-        cancel_button.clicked.connect(self.reject)
-        button_layout.addWidget(cancel_button)
-
-        layout.addLayout(button_layout)
-        self.setLayout(layout)
-
-    def print_ticket(self) -> None:
-        title = self.title_input.text()
-        ticket_number = self.ticket_number_input.text()
-        text = self.text_input.toPlainText()
-        try:
-            ip_address = get_printer_ip()
-        except ValueError as e:
-            QMessageBox.critical(self, "Error", str(e))
-            return
-        try:
-            printer = ThermalPrinter(ip_address)
-            printer.ticket(title, ticket_number, text)
-            QMessageBox.information(self, "Success", "Printed ticket.")
-            self.accept()
-        except Exception as e:
-            logger.error(f"Error printing ticket: {e}", exc_info=True)
-            QMessageBox.critical(self, "Error", f"Failed to print ticket: {e}")
+            logger.error(f"Error printing template '{self.template_name}': {e}", exc_info=True)
+            QMessageBox.critical(self, "Error", f"Failed to print: {e}")
 
 
 class SettingsDialog(QDialog):

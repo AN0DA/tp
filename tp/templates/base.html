@@ -22,9 +22,9 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('task') }}">Print Task</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('small_note') }}">Print Small Note</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url_for('ticket') }}">Print Ticket</a></li>
+                {% for name, template in templates.items() %}
+                <li class="nav-item"><a class="nav-link" href="{{ url_for('print_template', template_name=name) }}">{{ template.name }}</a></li>
+                {% endfor %}
                 <li class="nav-item"><a class="nav-link" href="{{ url_for('settings') }}">Settings</a></li>
             </ul>
         </div>

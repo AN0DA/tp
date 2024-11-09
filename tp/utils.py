@@ -1,41 +1,19 @@
+import datetime
 import logging
-import re
 import textwrap
 from typing import Any
 
+import requests
+from jinja2 import BaseLoader, Environment
+from mistune import Markdown
+from packaging import version
+from unidecode import unidecode
+
 from tp.config import get_chars_per_line, get_enable_special_letters
+from tp.markdown_renderer import PrinterRenderer
+from tp.template_manager import TemplateManager
 
 logger = logging.getLogger(__name__)
-
-POLISH_CHARACTERS = {
-    "ą": "a",
-    "ć": "c",
-    "ę": "e",
-    "ł": "l",
-    "ń": "n",
-    "ó": "o",
-    "ś": "s",
-    "ź": "z",
-    "ż": "z",
-    "Ą": "A",
-    "Ć": "C",
-    "Ę": "E",
-    "Ł": "L",
-    "Ń": "N",
-    "Ó": "O",
-    "Ś": "S",
-    "Ź": "Z",
-    "Ż": "Z",
-}
-
-
-def remove_polish_special_characters(text: str) -> str:
-    """
-    Replace Polish special letters with their ASCII equivalents.
-    """
-    for polish_char, ascii_char in POLISH_CHARACTERS.items():
-        text = text.replace(polish_char, ascii_char)
-    return text
 
 
 class TemplateRenderer:
@@ -44,7 +22,8 @@ class TemplateRenderer:
     text wrapping, and special character processing.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, template_manager: TemplateManager) -> None:
+        self.template_manager = template_manager
         self.reload_settings()
         logging.debug("Initialized TemplateRenderer.")
 
@@ -56,65 +35,44 @@ class TemplateRenderer:
         self.enable_special_letters = get_enable_special_letters()
         logging.debug("TemplateRenderer settings reloaded.")
 
-    def render(self, template: str, context: dict[str, str]) -> list[dict[str, Any]]:
+    def render_from_template(self, template_name: str, context: dict[str, Any]) -> list[dict[str, Any]]:
         """
-        Render the template with context, handling special characters,
-        Markdown formatting, and wrapping.
+        Render the template with context, handling markdown formatting and special characters.
         """
-        try:
-            logger.debug("Rendering template with context: %s", context)
-            text = template.format(**context)
-            logger.debug("Formatted text: %s", text)
-        except KeyError as e:
-            logger.error(f"Missing placeholder in context: {e}")
-            raise
+        template = self.template_manager.get_template(template_name)
+        if not template:
+            raise ValueError(f"Template '{template_name}' not found.")
 
-        if not self.enable_special_letters:
-            logger.debug("Removing special letters from text")
-            text = remove_polish_special_characters(text)
+        segments = template.get("segments", [])
+        rendered_segments = []
+        env = Environment(loader=BaseLoader(), autoescape=True, keep_trailing_newline=True)
 
-        segments = self.parse_markdown(text)
-        logger.debug("Parsed segments: %s", segments)
-        return segments
+        for segment in segments:
+            template_text = segment["text"]
+            jinja_template = env.from_string(template_text)
+            try:
+                text = jinja_template.render(**context)
+            except Exception as e:
+                logger.error(f"Error rendering template '{template_name}': {e}")
+                raise
 
-    def parse_markdown(self, text: str) -> list[dict[str, Any]]:
-        """
-        Parses markdown text and returns a list of segments with text and formatting.
-        """
-        logger = logging.getLogger(__name__)
-        logger.debug("Parsing markdown text")
+            if not self.enable_special_letters:
+                logger.debug("Transliterating text to ASCII")
+                text = unidecode(text)
 
-        patterns: list[tuple[str, dict[str, Any]]] = [
-            (r"\*\*(.*?)\*\*", {"bold": True}),
-            (r"__(.*?)__", {"bold": True}),
-            (r"\*(.*?)\*", {"italic": True}),
-            (r"_(.*?)_", {"italic": True}),
-            (r"~~(.*?)~~", {"underline": True}),
-            (r"`(.*?)`", {"font": "B"}),
-        ]
+            if segment.get("markdown", False):
+                # Use Mistune to parse markdown and render segments
+                renderer = PrinterRenderer(self.chars_per_line)
+                markdown = Markdown(renderer=renderer)
+                markdown(text)
 
-        combined_pattern = "|".join(f"({p})" for p, _ in patterns)
-        regex = re.compile(combined_pattern)
-
-        segments = []
-        pos = 0
-        while pos < len(text):
-            match = regex.search(text, pos)
-            if match:
-                start, end = match.span()
-                # Add any text before the match as a plain segment
-                if start > pos:
-                    plain_text = text[pos:start]
-                    wrapped_text = textwrap.fill(plain_text, width=self.chars_per_line)
-                    segments.append({"text": wrapped_text, "styles": {}})
-                # Determine which group matched
-                for i, (_, style) in enumerate(patterns):
-                    if match.group(i + 1):
-                        content = match.group(i + 1)
-                        wrapped_text = textwrap.fill(content, width=self.chars_per_line)
-                        segments.append({"text": wrapped_text, "styles": dict(style)})
-                        break
-                pos = end
+                # Process the segments generated by the renderer
+                for seg in renderer.segments:
+                    wrapped_text = textwrap.fill(
+                        seg["text"], width=self.chars_per_line, replace_whitespace=False, drop_whitespace=False
+                    )
+                    styles = seg.get("styles", {})
+                    rendered_segments.append({"text": wrapped_text, "styles": styles})
             else:
                 # No more matches; add the rest of the text as a plain segment
                 plain_text = text[pos:]
@@ -123,3 +81,29 @@ class TemplateRenderer:
                 break
         logger.debug("Parsed segments: %s", segments)
         return segments
+                wrapped_text = textwrap.fill(
+                    text, width=self.chars_per_line, replace_whitespace=False, drop_whitespace=False
+                )
+                rendered_segments.append({"text": wrapped_text, "styles": segment.get("styles", {})})
+
+        return rendered_segments
+
+
+def compute_agenda_variables() -> dict[str, Any]:
+    today = datetime.date.today()
+    year, week_number, _ = today.isocalendar()
+    week_start = today - datetime.timedelta(days=today.weekday())
+    week_end = week_start + datetime.timedelta(days=6)
+    days = []
+    for i in range(7):
+        day_date = week_start + datetime.timedelta(days=i)
+        day_name = day_date.strftime("%A")
+        date_str = day_date.strftime("%Y-%m-%d")
+        days.append({"day_name": day_name, "date": date_str})
+    return {
+        "week_number": week_number,
+        "week_start_date": week_start.strftime("%Y-%m-%d"),
+        "week_end_date": week_end.strftime("%Y-%m-%d"),
+        "days": days,
+    }
+

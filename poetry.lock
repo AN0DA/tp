@@ -373,6 +373,17 @@ files = [
 ]
 
 [[package]]
+name = "mistune"
+version = "3.0.2"
+description = "A sane and fast Markdown parser with useful plugins and renderers"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "mistune-3.0.2-py3-none-any.whl", hash = "sha256:71481854c30fdbc938963d3605b72501f5c10a9320ecd412c121c163a1c7d205"},
+    {file = "mistune-3.0.2.tar.gz", hash = "sha256:fc7f93ded930c92394ef2cb6f04a8aabab4117a91449e72dcc8dfa646a508be8"},
+]
+
+[[package]]
 name = "mypy"
 version = "1.13.0"
 description = "Optional static typing for Python"
@@ -949,6 +960,28 @@ shellingham = ">=1.3.0"
 typing-extensions = ">=3.7.4.3"
 
 [[package]]
+name = "types-pyyaml"
+version = "6.0.12.20240917"
+description = "Typing stubs for PyYAML"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "types-PyYAML-6.0.12.20240917.tar.gz", hash = "sha256:d1405a86f9576682234ef83bcb4e6fff7c9305c8b1fbad5e0bcd4f7dbdc9c587"},
+    {file = "types_PyYAML-6.0.12.20240917-py3-none-any.whl", hash = "sha256:392b267f1c0fe6022952462bf5d6523f31e37f6cea49b14cee7ad634b6301570"},
+]
+
+[[package]]
+name = "types-waitress"
+version = "3.0.1.20241030"
+description = "Typing stubs for waitress"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "types-waitress-3.0.1.20241030.tar.gz", hash = "sha256:58b67e05cba5492783964b5794432569946d92b484c23476caf7986b83285d57"},
+    {file = "types_waitress-3.0.1.20241030-py3-none-any.whl", hash = "sha256:4b93ff902b0d489c4fdaa509da6ce5944e897d728a40732ea967df253c59800d"},
+]
+
+[[package]]
 name = "typing-extensions"
 version = "4.12.2"
 description = "Backported and Experimental Type Hints for Python 3.8+"
@@ -960,6 +993,17 @@ files = [
 ]
 
 [[package]]
+name = "unidecode"
+version = "1.3.8"
+description = "ASCII transliterations of Unicode text"
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "Unidecode-1.3.8-py3-none-any.whl", hash = "sha256:d130a61ce6696f8148a3bd8fe779c99adeb4b870584eeb9526584e9aa091fd39"},
+    {file = "Unidecode-1.3.8.tar.gz", hash = "sha256:cfdb349d46ed3873ece4586b96aa75258726e2fa8ec21d6f00a591d98806c2f4"},
+]
+
+[[package]]
 name = "viivakoodi"
 version = "0.8.0"
 description = "Create standard barcodes with Python. No external modules needed (optional PIL support included)."
@@ -968,6 +1012,21 @@ python-versions = "*"
 files = [
     {file = "viivakoodi-0.8.0.tar.gz", hash = "sha256:670a35774559b25abdb089d58fb8e67e4ee9618f385b8418e5027ab860290e39"},
 ]
+
+[[package]]
+name = "waitress"
+version = "3.0.1"
+description = "Waitress WSGI server"
+optional = false
+python-versions = ">=3.9.0"
+files = [
+    {file = "waitress-3.0.1-py3-none-any.whl", hash = "sha256:26cdbc593093a15119351690752c99adc13cbc6786d75f7b6341d1234a3730ac"},
+    {file = "waitress-3.0.1.tar.gz", hash = "sha256:ef0c1f020d9f12a515c4ec65c07920a702613afcad1dbfdc3bcec256b6c072b3"},
+]
+
+[package.extras]
+docs = ["Sphinx (>=1.8.1)", "docutils", "pylons-sphinx-themes (>=1.0.9)"]
+testing = ["coverage (>=5.0)", "pytest", "pytest-cov"]
 
 [[package]]
 name = "werkzeug"
@@ -989,4 +1048,4 @@ watchdog = ["watchdog (>=2.3)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "f563060fe146ab0e4c76bb048badc35ed3af7b4a0f937b281233d76789427ce7"
+content-hash = "80a089baf4d31dde0bb14963f616b8c3fe039bc8066559ab8a28946473c463dd"
