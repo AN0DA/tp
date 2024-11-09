@@ -1,12 +1,11 @@
-# tests/test_printer.py
-
 from collections.abc import Generator
-from typing import Any
-from unittest.mock import MagicMock, patch
+from pathlib import Path
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
 from tp.printer import ThermalPrinter
+from tp.template_manager import TemplateManager
 
 
 @pytest.fixture
@@ -15,47 +14,72 @@ def mock_network_printer() -> Generator[MagicMock, None, None]:
         yield mock_network
 
 
-def test_printer_initialization(mock_network_printer: MagicMock) -> None:
-    ThermalPrinter("192.168.1.100")
-    mock_network_printer.assert_called_with("192.168.1.100", timeout=10)
+@pytest.fixture
+def template_manager(tmp_path: Path) -> TemplateManager:
+    # Set up a temporary template manager
+    templates_path = tmp_path / "print_templates"
+    templates_path.mkdir()
+    manager = TemplateManager(str(templates_path))
+    return manager
 
 
-def test_print_segments(mock_network_printer: MagicMock) -> None:
-    printer = ThermalPrinter("192.168.1.100")
-    segment: dict[str, Any] = {"text": "Test", "styles": {"bold": False}}
-    printer.print_segments([segment])
-    # Verify that set and text methods are called with correct arguments
-    mock_network_printer.return_value.set.assert_called_with(
-        align="left", font="a", bold=False, underline=0, double_width=False, double_height=False
-    )
-    mock_network_printer.return_value.text.assert_called_with("Test")
+def test_printer_context_management(mock_network_printer: MagicMock, template_manager: TemplateManager) -> None:
+    with ThermalPrinter("192.168.1.100", template_manager) as printer:
+        assert printer.printer is not None
+    # Ensure the printer connection is closed
+    assert mock_network_printer.return_value.close.called
 
 
-def test_task_method(mock_network_printer: MagicMock) -> None:
-    printer = ThermalPrinter("192.168.1.100")
-    printer.task("Title", "Content")
-    # Ensure print_segments and cut are called
-    assert mock_network_printer.return_value.cut.called
+def test_print_template(mock_network_printer: MagicMock, template_manager: TemplateManager) -> None:
+    # Create a sample template
+    template_content = """
+name: Test Template
+description: A test template
+variables: []
+segments:
+  - text: "Hello, World!"
+    markdown: false
+    styles:
+      bold: true
+"""
+    template_file = template_manager.template_dir + "/test_template.yaml"
+    with open(template_file, "w", encoding="utf-8") as f:
+        f.write(template_content)
+    template_manager.templates = template_manager.load_templates()
+
+    with ThermalPrinter("192.168.1.100", template_manager) as printer:
+        printer.print_template("test_template", {})
+        # Ensure print_segments is called with correct segments
+        mock_printer_instance = mock_network_printer.return_value
+        mock_printer_instance.set.assert_has_calls(
+            [
+                call(
+                    align="left",
+                    font="a",
+                    bold=True,
+                    underline=False,
+                    invert=False,
+                    double_width=False,
+                    double_height=False,
+                ),
+                call(
+                    align="left",
+                    font="a",
+                    bold=False,
+                    underline=False,
+                    invert=False,
+                    double_width=False,
+                    double_height=False,
+                ),
+            ]
+        )
+        mock_printer_instance.text.assert_called_with("Hello, World!")
+        assert mock_printer_instance.cut.called
 
 
-def test_small_note_method(mock_network_printer: MagicMock) -> None:
-    printer = ThermalPrinter("192.168.1.100")
-    printer.small_note()
-    # Ensure print_segments and cut are called
-    assert mock_network_printer.return_value.cut.called
-
-
-def test_ticket_method(mock_network_printer: MagicMock) -> None:
-    printer = ThermalPrinter("192.168.1.100")
-    printer.ticket("Title", "123", "Content")
-    # Ensure print_segments and cut are called
-    assert mock_network_printer.return_value.cut.called
-
-
-def test_print_segments_exception(mock_network_printer: MagicMock) -> None:
-    # Simulate an exception during printing
-    mock_network_printer.return_value.text.side_effect = Exception("Printer error")
-    printer = ThermalPrinter("192.168.1.100")
-    segment: dict[str, Any] = {"text": "Test", "styles": {}}
-    with pytest.raises(Exception, match="Printer error"):
-        printer.print_segments([segment])
+def test_printer_connection_error(template_manager: TemplateManager) -> None:
+    # Simulate a connection error
+    with patch("tp.printer.Network", side_effect=Exception("Connection error")), pytest.raises(
+        Exception, match="Connection error"
+    ), ThermalPrinter("192.168.1.100", template_manager):
+        pass
