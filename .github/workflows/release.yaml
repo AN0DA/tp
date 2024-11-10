@@ -168,6 +168,11 @@ jobs:
           NEW_VERSION: ${{ steps.release.outputs.new_release_version }}
         run: sed -i "s/sonar.projectVersion=.*/sonar.projectVersion=$NEW_VERSION/" sonar-project.properties
 
+      - name: Update __init__.py version
+        env:
+          NEW_VERSION: ${{ steps.release.outputs.new_release_version }}
+        run: sed -i "s/__version__ = .*/__version__ = "$NEW_VERSION"/" tp/__init__.py
+
 
       - name: Upload artifacts
         if: steps.release.outputs.new_release_published == 'true'
