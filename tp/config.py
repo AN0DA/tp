@@ -77,3 +77,41 @@ def set_check_for_updates(check: bool) -> None:
     config.set("Updates", "check_for_updates", str(check))
     with open(CONFIG_FILE, "w") as configfile:
         config.write(configfile)
+
+
+def get_flask_port() -> int:
+    config = configparser.ConfigParser()
+    config.read(CONFIG_FILE)
+    try:
+        return config.getint("Flask", "port")
+    except (configparser.NoSectionError, configparser.NoOptionError):
+        return 5555
+
+
+def get_flask_secret_key() -> str:
+    config = configparser.ConfigParser()
+    config.read(CONFIG_FILE)
+    try:
+        return config.get("Flask", "secret_key")
+    except (configparser.NoSectionError, configparser.NoOptionError):
+        return "default_secret_key"
+
+
+def set_flask_port(port: int) -> None:
+    config = configparser.ConfigParser()
+    config.read(CONFIG_FILE)
+    if not config.has_section("Flask"):
+        config.add_section("Flask")
+    config.set("Flask", "port", str(port))
+    with open(CONFIG_FILE, "w") as configfile:
+        config.write(configfile)
+
+
+def set_flask_secret_key(secret_key: str) -> None:
+    config = configparser.ConfigParser()
+    config.read(CONFIG_FILE)
+    if not config.has_section("Flask"):
+        config.add_section("Flask")
+    config.set("Flask", "secret_key", secret_key)
+    with open(CONFIG_FILE, "w") as configfile:
+        config.write(configfile)

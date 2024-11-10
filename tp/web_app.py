@@ -9,6 +9,7 @@ from tp.config import (
     get_chars_per_line,
     get_check_for_updates,
     get_enable_special_letters,
+    get_flask_secret_key,
     get_printer_ip,
     set_chars_per_line,
     set_check_for_updates,
@@ -22,7 +23,7 @@ from tp.utils import compute_agenda_variables
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.secret_key = "your_secret_key_here"  # nosec: B105
+app.secret_key = get_flask_secret_key()
 
 template_manager = TemplateManager("tp/print_templates")
 
