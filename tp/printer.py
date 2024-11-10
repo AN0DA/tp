@@ -78,7 +78,7 @@ class ThermalPrinter:
         Render and print a template by name with the given context.
         """
         if not self.printer:
-            raise Exception("Printer connection is not open.")
+            raise RuntimeError("Printer connection is not open.")
         segments = self.template_renderer.render_from_template(template_name, context)
         self.print_segments(segments)
         self.printer.cut()

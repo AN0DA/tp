@@ -84,7 +84,7 @@ class TemplateRenderer:
 
 def compute_agenda_variables() -> dict[str, Any]:
     today = datetime.date.today()
-    year, week_number, _ = today.isocalendar()
+    _, week_number, _ = today.isocalendar()
     week_start = today - datetime.timedelta(days=today.weekday())
     week_end = week_start + datetime.timedelta(days=6)
     days = []
@@ -108,7 +108,7 @@ def get_latest_version() -> str:
         data = response.json()
         return data["tag_name"].lstrip("v")  # Remove 'v' if present
     else:
-        raise Exception("Failed to fetch the latest version from GitHub.")
+        raise RuntimeWarning("Failed to fetch the latest version from GitHub.")
 
 
 def is_new_version_available(current_version: str) -> bool:
