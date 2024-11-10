@@ -6,6 +6,7 @@ from waitress import serve
 from werkzeug.wrappers import Response
 
 from tp.config import (
+    PRINT_TEMPLATE_FOLDER,
     get_chars_per_line,
     get_check_for_updates,
     get_enable_special_letters,
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = get_flask_secret_key()
 
-template_manager = TemplateManager("tp/print_templates")
+template_manager = TemplateManager(PRINT_TEMPLATE_FOLDER)
 
 
 @app.route("/")

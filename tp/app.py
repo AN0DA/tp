@@ -9,6 +9,7 @@ import typer
 from tp import __version__
 from tp.config import (
     CONFIG_FILE,
+    PRINT_TEMPLATE_FOLDER,
     get_chars_per_line,
     get_check_for_updates,
     get_enable_special_letters,
@@ -79,7 +80,7 @@ def print_template(template_name: str = typer.Argument(None)) -> None:
     """
     Print using a specified template.
     """
-    template_manager = TemplateManager("tp/print_templates")
+    template_manager = TemplateManager(PRINT_TEMPLATE_FOLDER)
     if not template_name:
         typer.echo("Available templates:")
         for name in template_manager.list_templates():
