@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tp"
-version = "1.0.0"
+version = "1.1.0"
 description = ""
 authors = ["Mikołaj Kaczmarek <mikolaj.s.kaczmarek@outlook.com>"]
 readme = "README.md"
