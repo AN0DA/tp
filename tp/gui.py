@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
 )
 
 from tp.config import (
+    PRINT_TEMPLATE_FOLDER,
     get_chars_per_line,
     get_check_for_updates,
     get_enable_special_letters,
@@ -36,7 +37,7 @@ logger = logging.getLogger(__name__)
 class MainWindow(QWidget):
     def __init__(self) -> None:
         super().__init__()
-        self.template_manager = TemplateManager("tp/print_templates")
+        self.template_manager = TemplateManager(PRINT_TEMPLATE_FOLDER)
         self.setWindowTitle("Thermal Printer Application")
         self.init_ui()
 
