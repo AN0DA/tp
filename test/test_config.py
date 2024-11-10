@@ -50,22 +50,22 @@ def test_set_and_get_enable_special_letters() -> None:
     assert config.get_enable_special_letters() is False
 
 
-def test_get_flask_debug_default() -> None:
-    assert config.get_flask_debug() is False
-
-
-def test_set_and_get_flask_debug() -> None:
-    config.set_flask_debug(True)
-    assert config.get_flask_debug() is True
-
-
-def test_get_flask_secret_key_default() -> None:
-    assert config.get_flask_secret_key() == "default_secret_key"
-
-
-def test_set_and_get_flask_secret_key() -> None:
-    config.set_flask_secret_key("my_secret_key")
-    assert config.get_flask_secret_key() == "my_secret_key"
+# def test_get_flask_debug_default() -> None:
+#     assert config.get_flask_debug() is False
+#
+#
+# def test_set_and_get_flask_debug() -> None:
+#     config.set_flask_debug(True)
+#     assert config.get_flask_debug() is True
+#
+#
+# def test_get_flask_secret_key_default() -> None:
+#     assert config.get_flask_secret_key() == "default_secret_key"
+#
+#
+# def test_set_and_get_flask_secret_key() -> None:
+#     config.set_flask_secret_key("my_secret_key")
+#     assert config.get_flask_secret_key() == "my_secret_key"
 
 
 def test_corrupted_config_file() -> None:

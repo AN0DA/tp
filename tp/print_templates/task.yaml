@@ -1,0 +1,37 @@
+name: Task
+description: Print a task with a title and text.
+variables:
+  - name: title
+    description: Task Title
+    required: true
+    markdown: false
+  - name: text
+    description: Task Text
+    required: true
+    markdown: true
+segments:
+  - text: "\n"
+    markdown: false
+    styles: {}
+  - text: "{{ title }}\n"
+    markdown: false
+    styles:
+      align: center
+      font: a
+      bold: true
+      double_width: true
+      double_height: true
+  - text: "-----------------------\n"
+    markdown: false
+    styles:
+      align: center
+      font: a
+      bold: true
+      double_width: true
+      double_height: true
+  - text: "{{ text }}\n"
+    markdown: true
+    styles:
+      align: left
+      font: a
+      bold: false

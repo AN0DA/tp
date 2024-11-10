@@ -1,0 +1,49 @@
+name: Ticket
+description: Print a ticket with a title, ticket number, and text.
+variables:
+  - name: title
+    description: Ticket Title
+    required: false
+    markdown: false
+  - name: ticket_number
+    description: Ticket Number
+    required: false
+    markdown: false
+  - name: text
+    description: Ticket Text (supports markdown)
+    required: false
+    markdown: true
+segments:
+  - text: "\n"
+    markdown: false
+    styles: {}
+  - text: "{% if title %}{{ title }}\n{% endif %}"
+    markdown: false
+    styles:
+      align: center
+      font: a
+      bold: true
+      double_width: true
+      double_height: true
+  - text: "{% if ticket_number %}{{ ticket_number }}\n{% endif %}"
+    markdown: false
+    styles:
+      align: center
+      font: b
+      underline: true
+      double_width: true
+      double_height: true
+  - text: "{% if not title and not ticket_number %}\n\n{% endif %}"
+    markdown: false
+    styles: {}
+  - text: "-----------------------\n"
+    markdown: false
+    styles:
+      align: center
+      font: a
+      bold: true
+  - text: "{{ text }}\n"
+    markdown: true
+    styles:
+      align: left
+      font: a

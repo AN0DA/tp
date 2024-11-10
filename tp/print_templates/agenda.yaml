@@ -1,0 +1,29 @@
+name: Weekly Agenda
+description: Print a ready-to-fill agenda for the current week.
+variables: []
+segments:
+  - text: "Week {{ week_number }}\n"
+    markdown: false
+    styles:
+      align: center
+      font: a
+      bold: true
+      double_width: true
+      double_height: true
+  - text: "{{ week_start_date }} - {{ week_end_date }}\n"
+    markdown: false
+    styles:
+      align: center
+      font: a
+      bold: true
+  - text: "-----------------------\n"
+    markdown: false
+    styles:
+      align: center
+      font: a
+      bold: true
+  - text: "{% for day in days %}{{ day.day_name }} {{ day.date }}\n\n\n\n{% endfor %}"
+    markdown: false
+    styles:
+      align: left
+      font: a

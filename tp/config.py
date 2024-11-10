@@ -60,6 +60,25 @@ def set_enable_special_letters(enable: bool) -> None:
         config.write(configfile)
 
 
+def get_check_for_updates() -> bool:
+    config = configparser.ConfigParser()
+    config.read(CONFIG_FILE)
+    try:
+        return config.getboolean("Updates", "check_for_updates")
+    except (configparser.NoSectionError, configparser.NoOptionError):
+        return True  # Default to True
+
+
+def set_check_for_updates(check: bool) -> None:
+    config = configparser.ConfigParser()
+    config.read(CONFIG_FILE)
+    if not config.has_section("Updates"):
+        config.add_section("Updates")
+    config.set("Updates", "check_for_updates", str(check))
+    with open(CONFIG_FILE, "w") as configfile:
+        config.write(configfile)
+
+
 def get_flask_port() -> int:
     config = configparser.ConfigParser()
     config.read(CONFIG_FILE)
@@ -67,15 +86,6 @@ def get_flask_port() -> int:
         return config.getint("Flask", "port")
     except (configparser.NoSectionError, configparser.NoOptionError):
         return 5555
-
-
-def get_flask_debug() -> bool:
-    config = configparser.ConfigParser()
-    config.read(CONFIG_FILE)
-    try:
-        return config.getboolean("Flask", "debug")
-    except (configparser.NoSectionError, configparser.NoOptionError):
-        return False
 
 
 def get_flask_secret_key() -> str:
@@ -93,16 +103,6 @@ def set_flask_port(port: int) -> None:
     if not config.has_section("Flask"):
         config.add_section("Flask")
     config.set("Flask", "port", str(port))
-    with open(CONFIG_FILE, "w") as configfile:
-        config.write(configfile)
-
-
-def set_flask_debug(debug: bool) -> None:
-    config = configparser.ConfigParser()
-    config.read(CONFIG_FILE)
-    if not config.has_section("Flask"):
-        config.add_section("Flask")
-    config.set("Flask", "debug", str(debug))
     with open(CONFIG_FILE, "w") as configfile:
         config.write(configfile)
 

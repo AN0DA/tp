@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Print {{ template.name }}</h2>
+
+{% if template.variables %}
+<form method="post">
+    {% for var in template.variables %}
+    <div class="mb-3">
+        <label for="{{ var.name }}" class="form-label">{{ var.description }}:</label>
+
+        {% if var.markdown %}
+        <textarea name="{{ var.name }}" id="{{ var.name }}" class="form-control" required></textarea>
+        {% else %}
+        <input type="text" name="{{ var.name }}" id="{{ var.name }}" class="form-control" required>
+        {% endif %}
+    </div>
+    {% endfor %}
+    <button type="submit" class="btn btn-primary">Print</button>
+</form>
+{% else %}
+<div class="card-body">
+    <p class="card-text">Do you want to print {{ template.name }}?</p>
+    <form method="post" class="d-inline">
+        <button name="confirm" value="yes" class="btn btn-primary">Yes</button>
+        <button name="confirm" value="no" class="btn btn-secondary">No</button>
+    </form>
+</div>
+{% endif %}
+
+{% endblock %}
